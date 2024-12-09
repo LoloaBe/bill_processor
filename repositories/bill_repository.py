@@ -31,52 +31,37 @@
 
 # # Query bills
 # lunch_bills = repo.query(category="Lunch")
-
+# repositories/bill_repository.py
 from google.cloud import firestore
-from models.bill import Bill
 from typing import List, Dict, Optional
-import uuid
+from decimal import Decimal
 from datetime import datetime
+from models.bill import Bill, BillItem  # Add this import
 
 class BillRepository:
     def __init__(self):
         self.db = firestore.Client()
         self.collection = self.db.collection('bills')
     
-    def create(self, items: List[BillItem], metadata: Dict = None) -> Bill:
-        bill_id = str(uuid.uuid4())
-        bill = Bill(
-            id=bill_id,
-            items=items,
-            total=sum(item.price for item in items),
-            timestamp=datetime.now(),
-            metadata=metadata or {}
-        )
+    def create(self, bill: Bill) -> None:
+        """Store bill in Firestore"""
+        bill_ref = self.collection.document()
         
-        self.collection.document(bill_id).set(bill.to_dict())
-        return bill
-    
-    def get(self, bill_id: str) -> Optional[Bill]:
-        doc = self.collection.document(bill_id).get()
-        return self._doc_to_bill(doc) if doc.exists else None
-    
-    def query(self, **filters) -> List[Bill]:
-        query = self.collection
-        for key, value in filters.items():
-            query = query.where(key, '==', value)
-        return [self._doc_to_bill(doc) for doc in query.stream()]
-    
-    def _doc_to_bill(self, doc) -> Bill:
-        data = doc.to_dict()
-        items = [
-            BillItem(description=item['description'], price=Decimal(str(item['price'])))
-            for item in data['items']
-        ]
-        return Bill(
-            id=doc.id,
-            items=items,
-            total=Decimal(str(data['total'])),
-            timestamp=data['timestamp'],
-            metadata=data['metadata'],
-            store_name=data.get('store_name')
-        )
+        # Convert to dictionary for Firestore
+        bill_data = {
+            'store_name': bill.store_name,
+            'address': bill.address,
+            'phone': bill.phone,
+            'date': bill.date,
+            'total': float(bill.total),
+            'payment_method': bill.payment_method,
+            'reference': bill.reference,
+            'items': [{
+                'description': item.description,
+                'quantity': item.quantity,
+                'unit_price': float(item.unit_price),
+                'total_price': float(item.total_price)
+            } for item in bill.items]
+        }
+        
+        bill_ref.set(bill_data)

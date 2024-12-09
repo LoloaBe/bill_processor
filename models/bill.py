@@ -3,31 +3,26 @@
 #  - Bill represents the entire bill document
 #  - The to_dict() method converts the Bill object to a dictionary for Firestore storage
 
+# models/bill.py
 from dataclasses import dataclass
 from decimal import Decimal
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 @dataclass
 class BillItem:
     description: str
-    price: Decimal
+    quantity: int
+    unit_price: Decimal
+    total_price: Decimal
 
 @dataclass
 class Bill:
-    id: str
+    store_name: str
+    address: str
+    phone: str
+    date: datetime
     items: List[BillItem]
     total: Decimal
-    timestamp: datetime
-    metadata: Dict
-    store_name: Optional[str] = None
-    
-    def to_dict(self) -> Dict:
-        return {
-            'id': self.id,
-            'items': [{'description': item.description, 'price': float(item.price)} for item in self.items],
-            'total': float(self.total),
-            'timestamp': self.timestamp,
-            'metadata': self.metadata,
-            'store_name': self.store_name
-        }
+    payment_method: str
+    reference: str
